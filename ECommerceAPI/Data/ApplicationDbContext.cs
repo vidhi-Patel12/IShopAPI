@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using ECommerceAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceAPI.Data
 {
@@ -8,5 +9,10 @@ namespace ECommerceAPI.Data
         {
 
         }
+
+        public DbSet<Register> Register { get; set; }
+
+        public DbSet<Login> Login { get; set; }
+
     }
 }

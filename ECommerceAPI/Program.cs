@@ -1,6 +1,9 @@
+using Braintree;
 using ECommerceAPI.Data;
 using ECommerceAPI.Interface;
+using ECommerceAPI.Models;
 using ECommerceAPI.Repository;
+using ECommerceAPI.Repository.User;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +16,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddControllers();
+
+builder.Services.AddDistributedMemoryCache(); // Required for session
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -33,12 +45,25 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var apiUrl = builder.Configuration["ApiSettings:APIURL"];
 
+builder.Services.AddScoped<IAccount, AccountRepository>();
 builder.Services.AddScoped<ICoupan, CoupanRepository>();
 builder.Services.AddScoped<IOrder, OrderRepository>();
 builder.Services.AddScoped<IProduct, ProductRepository>();
 builder.Services.AddScoped<IDashboard, DashboardRepository>();
+builder.Services.AddScoped<IUser, UserRepository>();
 
+builder.Services.AddSingleton<SmsService>();
 
+builder.Services.AddSingleton<IBraintreeGateway>(provider =>
+{
+    return new BraintreeGateway
+    {
+        Environment = Braintree.Environment.SANDBOX, // Or .PRODUCTION
+        MerchantId = builder.Configuration["Braintree:MerchantId"],
+        PublicKey = builder.Configuration["Braintree:PublicKey"],
+        PrivateKey = builder.Configuration["Braintree:PrivateKey"]
+    };
+});
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
 .AddCookie(options =>
@@ -77,6 +102,8 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 }
 
 app.UseHttpsRedirection();
+
+app.UseSession();
 
 app.UseRouting();
 app.UseAuthorization();
